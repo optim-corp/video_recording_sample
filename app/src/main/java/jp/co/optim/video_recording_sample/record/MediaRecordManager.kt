@@ -25,8 +25,8 @@ class MediaRecordManager : MediaEncoder.Callback {
     private var isStarted = false
     private var isRecording = false
 
-    private val isEncoding: Boolean get() =
-        and(audioEncoder?.isEncoding, videoEncoder?.isEncoding)
+    private val isEncodeAvailable: Boolean get() =
+        and(audioEncoder?.isAvailable, videoEncoder?.isAvailable)
 
     fun prepare(recordData: RecordData) {
         // Muxer定義
@@ -83,19 +83,22 @@ class MediaRecordManager : MediaEncoder.Callback {
     }
 
     override fun onStarted(mediaType: MediaType, mediaFormat: MediaFormat) {
-        when (mediaType) {
-            MediaType.AUDIO -> {
-                audioEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
-                logI("Audio trackId: ${audioEncoder?.trackId}")
+        synchronized(this) {
+            when (mediaType) {
+                MediaType.AUDIO -> {
+                    audioEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
+                    logI("Audio trackId: ${audioEncoder?.trackId}")
+                }
+                MediaType.VIDEO -> {
+                    videoEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
+                    logI("Video trackId: ${videoEncoder?.trackId}")
+                }
             }
-            MediaType.VIDEO -> {
-                videoEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
-                logI("Video trackId: ${videoEncoder?.trackId}")
+            // フォーマットをトラックに追加し終わったら Muxer を開始できる.
+            if (isEncodeAvailable) {
+                logI("Start mediaMuxer.")
+                mediaMuxer?.start()
             }
-        }
-        if (isEncoding) {
-            logI("Start mediaMuxer.")
-            mediaMuxer?.start()
         }
     }
 
@@ -104,23 +107,30 @@ class MediaRecordManager : MediaEncoder.Callback {
         buffer: ByteBuffer,
         bufferInfo: MediaCodec.BufferInfo
     ) {
-        mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
+        synchronized(this) {
+            if (isEncodeAvailable) {
+                logI("writeSampleData: $trackId")
+                mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
+            }
+        }
     }
 
     override fun onFinished() {
-        if (!isEncoding) {
-            // AudioとVideoのエンコードが両方完了してからMuxerをリリースする.
-            mediaMuxer?.release()
+        synchronized(this) {
+            if (!isEncodeAvailable && mediaMuxer != null) {
+                // AudioとVideoのエンコードが両方完了してからMuxerをリリースする.
+                mediaMuxer?.release()
 
-            // リセット.
-            mediaMuxer = null
-            audioEncoder = null
-            videoEncoder = null
-            isPrepared = false
-            isStarted = false
-            isRecording = false
+                // リセット.
+                mediaMuxer = null
+                audioEncoder = null
+                videoEncoder = null
+                isPrepared = false
+                isStarted = false
+                isRecording = false
 
-            logI("Recording is completed!")
+                logI("Recording is completed!")
+            }
         }
     }
 }

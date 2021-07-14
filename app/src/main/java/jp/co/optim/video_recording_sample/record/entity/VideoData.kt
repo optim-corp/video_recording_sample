@@ -11,7 +11,7 @@ import android.util.Size
  */
 data class VideoData(
     val frameSize: Size = Size(0, 0),
-    val frameRate: Int = 20,
+    val frameRate: Int = 10,
     val frameInterval: Int = 10,
     val bitRate: Int = frameSize.width * frameSize.height * frameRate / 8,
 ) {

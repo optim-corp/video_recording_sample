@@ -5,6 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
+import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import jp.co.optim.video_recording_sample.record.entity.MediaType
 import java.nio.ByteBuffer
@@ -30,10 +31,18 @@ class AudioEncoder(
         codec
     }
 
+    private var reqTimeStampMicros = 0L
+
+    override fun enqueueEndStream() {
+        val index = dequeueInputBuffer(true)
+        mediaCodec.queueInputBuffer(
+            index, 0, 0, reqTimeStampMicros, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+    }
+
     @WorkerThread
     fun enqueueAudioBytes(bytes: ByteArray) {
-        // エンコード処理中でなければ何もしない.
-        if (!isEncoding) return
+        // 停止が呼び出されたか、エンコード処理中でなければ何もしない.
+        if (isStopRequested || !isEncoding) return
 
         // バイト配列からバッファー変換してキューに詰める.
         enqueueBuffer(ByteBuffer.wrap(bytes), reqTimeStampMicros)
@@ -42,5 +51,33 @@ class AudioEncoder(
         val sample = bytes.size / audioData.bytesPerSample
         val timeIntervalMicros = 1000L * 1000L * sample / audioData.samplingRate
         reqTimeStampMicros += timeIntervalMicros
+    }
+
+    @WorkerThread
+    private fun enqueueBuffer(buffer: ByteBuffer, timeStampMicros: Long) {
+        val index = dequeueInputBuffer()
+        if (index < 0) return
+        val inputBuffer = mediaCodec.getInputBuffer(index) ?: return
+        inputBuffer.put(buffer)
+        mediaCodec.queueInputBuffer(index, 0, buffer.capacity(), timeStampMicros, 0)
+    }
+
+    @WorkerThread
+    private fun dequeueInputBuffer(neverGiveUp: Boolean = false): Int {
+        var retryCount = 0
+        while (retryCount < ENCODE_TRY_TIMES) {
+            val index = mediaCodec.dequeueInputBuffer(CODEC_DEQUEUE_TIMEOUT_US)
+            if (index < 0) {
+                when (index) {
+                    MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                        if (!neverGiveUp) retryCount++
+                    }
+                    else -> {}
+                }
+            } else {
+                return index
+            }
+        }
+        return -1
     }
 }
