@@ -125,30 +125,31 @@ class CameraCaptureRenderer(private val context: Context) {
     ) {
         val intervalMillis = 1000L / frameRate
         logI("Start rendering. timeInterval: $intervalMillis")
-        val dummyBitmap = let {
-            val bmp = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
-            val cv = Canvas(bmp)
-            val p = Paint().apply { color = Color.BLUE }
-            cv.drawRect(0f, 0f, size.width.toFloat(), size.height.toFloat(), p)
-            bmp
-        }
+        var currentBitmap: Bitmap? = null
         while (isRendering) {
-            val bitmap = if (isOpened) textureView?.getBitmap(frameSize.width, frameSize.height) else null
-            if (bitmap != null) {
-                listener(bitmap)
-                bitmap.recycle()
+            val newBitmap = if (isOpened) textureView?.getBitmap(size.width, size.height) else null
+            if (newBitmap != null) {
+                logI("New Bitmap")
+                listener(newBitmap)
+                if (currentBitmap != null && !currentBitmap.isRecycled) {
+                    currentBitmap.recycle()
+                }
+                currentBitmap = newBitmap
             } else {
-                listener(dummyBitmap)
+                logI("Current Bitmap")
+                if (currentBitmap != null && !currentBitmap.isRecycled) {
+                    listener(currentBitmap)
+                }
             }
-            listener(dummyBitmap)
-
             try {
                 Thread.sleep(intervalMillis)
             } catch (e: InterruptedException) {
                 // Ignored.
             }
         }
-        dummyBitmap.recycle()
+        if (currentBitmap != null && !currentBitmap.isRecycled) {
+            currentBitmap.recycle()
+        }
         logI("End rendering.")
     }
 

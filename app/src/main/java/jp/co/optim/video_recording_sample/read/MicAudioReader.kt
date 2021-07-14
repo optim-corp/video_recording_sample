@@ -9,48 +9,53 @@ import jp.co.optim.video_recording_sample.record.entity.AudioData
 import kotlin.concurrent.thread
 import kotlin.math.max
 
-class MicAudioReader(
-    audioData: AudioData,
-    private val onReadBytesListener: (bytes: ByteArray) -> Unit?
-) {
+class MicAudioReader {
 
-    private val bufferSize = max(
-        audioData.samplingRate / 10,
-        AudioRecord.getMinBufferSize(
+    private var isReading = false
+
+    fun startReading(
+        audioData: AudioData,
+        listener: (bytes: ByteArray) -> Unit?
+    ) {
+        isReading = true
+
+        val bufferSize = max(
+            audioData.samplingRate / 10,
+            AudioRecord.getMinBufferSize(
+                audioData.samplingRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+        ) * audioData.bytesPerSample
+
+        val audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
             audioData.samplingRate,
             AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
+            AudioFormat.ENCODING_PCM_16BIT,
+            bufferSize
         )
-    ) * audioData.bytesPerSample
-
-    private val audioRecord = AudioRecord(
-        MediaRecorder.AudioSource.MIC,
-        audioData.samplingRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        bufferSize
-    )
-
-    private var isRecording = false
-
-    fun start() {
-        isRecording = true
         audioRecord.startRecording()
+
         // スレッド開始
-        thread { read() }
+        thread { read(bufferSize, audioRecord, listener) }
     }
 
-    fun stop() {
-        isRecording = false
+    fun stopReading() {
+        isReading = false
     }
 
     @WorkerThread
-    private fun read() {
+    private fun read(
+        bufferSize: Int,
+        audioRecord: AudioRecord,
+        listener: (bytes: ByteArray) -> Unit?
+    ) {
         logI("Start reading.")
-        while (isRecording) {
+        while (isReading) {
             val bytes = ByteArray(bufferSize)
             audioRecord.read(bytes, 0, bufferSize)
-            onReadBytesListener(bytes)
+            listener(bytes)
         }
         logI("End reading.")
         audioRecord.release()
