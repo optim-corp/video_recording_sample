@@ -4,8 +4,8 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.WorkerThread
+import jp.co.optim.video_recording_sample.entity.AudioData
 import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.record.entity.AudioData
 import kotlin.concurrent.thread
 import kotlin.math.max
 

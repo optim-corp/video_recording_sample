@@ -6,15 +6,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import jp.co.optim.video_recording_sample.databinding.ActivityMainBinding
+import jp.co.optim.video_recording_sample.entity.AudioData
+import jp.co.optim.video_recording_sample.entity.RecordData
+import jp.co.optim.video_recording_sample.entity.ScreenResolution
+import jp.co.optim.video_recording_sample.entity.VideoData
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.extensions.logW
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
 import jp.co.optim.video_recording_sample.record.MediaRecordManager
-import jp.co.optim.video_recording_sample.record.entity.AudioData
-import jp.co.optim.video_recording_sample.record.entity.RecordData
-import jp.co.optim.video_recording_sample.record.entity.ScreenResolution
-import jp.co.optim.video_recording_sample.record.entity.VideoData
 
 
 class MainActivity : AppCompatActivity() {

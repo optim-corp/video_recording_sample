@@ -4,9 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.hardware.camera2.*
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -16,9 +13,9 @@ import android.view.Surface
 import android.view.TextureView
 import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
+import jp.co.optim.video_recording_sample.entity.VideoData
 import jp.co.optim.video_recording_sample.extensions.logD
 import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.record.entity.VideoData
 import kotlin.concurrent.thread
 
 class CameraCaptureRenderer(private val context: Context) {

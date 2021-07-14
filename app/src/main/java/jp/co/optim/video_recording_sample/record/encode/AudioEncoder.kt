@@ -5,9 +5,8 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.record.entity.AudioData
-import jp.co.optim.video_recording_sample.record.entity.MediaType
+import jp.co.optim.video_recording_sample.entity.AudioData
+import jp.co.optim.video_recording_sample.entity.MediaType
 import java.nio.ByteBuffer
 
 class AudioEncoder(

@@ -1,4 +1,4 @@
-package jp.co.optim.video_recording_sample.record.entity
+package jp.co.optim.video_recording_sample.entity
 
 /**
  * 録音に関連する情報を有したデータクラス

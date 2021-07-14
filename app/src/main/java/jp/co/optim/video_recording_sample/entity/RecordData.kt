@@ -1,4 +1,4 @@
-package jp.co.optim.video_recording_sample.record.entity
+package jp.co.optim.video_recording_sample.entity
 
 import jp.co.optim.video_recording_sample.extensions.logI
 import java.io.File
