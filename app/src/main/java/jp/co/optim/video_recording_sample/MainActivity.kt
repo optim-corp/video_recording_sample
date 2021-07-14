@@ -103,7 +103,8 @@ class MainActivity : AppCompatActivity() {
         }
         logI("Open camera. resolution: $resolution")
         captureRenderer.openCamera(binding.textureView, resolution.frameSize)
-        binding.textViewResolution.text = "Screen Resolution: $resolution"
+        binding.textViewResolution.text =
+            getString(R.string.resolution_text_message, resolution.toString())
     }
 
     private fun startAudio() {
@@ -151,15 +152,15 @@ class MainActivity : AppCompatActivity() {
             .toTypedArray()
 
         AlertDialog.Builder(this).apply {
-            setTitle("Select Screen Resolution")
-            setSingleChoiceItems(nameArray, 0) { dialog, item ->
+            setTitle(R.string.select_dialog_title)
+            setSingleChoiceItems(nameArray, 0) { _, item ->
                 resolution = ScreenResolution.convertFromString(nameArray[item])
             }
-            setPositiveButton("Select") { dialog, id ->
+            setPositiveButton(R.string.select) { _, _ ->
                 if (resolution == ScreenResolution.UNKNOWN) resolution = ScreenResolution.SD
                 openCamera()
             }
-            setNegativeButton("Cancel") { dialog, id ->
+            setNegativeButton(R.string.cancel) { _, _ ->
                 finish()
             }
             setCancelable(false)

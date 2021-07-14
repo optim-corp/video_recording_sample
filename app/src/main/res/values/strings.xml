@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Video Recording Sample</string>
+
+    <string name="audio">Audio</string>
+    <string name="video">Video</string>
+    <string name="stop">Stop</string>
+    <string name="select">Select</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="select_dialog_title">Select Screen Resolution</string>
+    <string name="resolution_text_message">Screen Resolution: %s</string>
 </resources>
