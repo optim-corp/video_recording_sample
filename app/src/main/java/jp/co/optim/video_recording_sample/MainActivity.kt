@@ -2,17 +2,20 @@ package jp.co.optim.video_recording_sample
 
 import android.Manifest
 import android.os.Bundle
-import android.util.Size
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import jp.co.optim.video_recording_sample.databinding.ActivityMainBinding
 import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.extensions.logW
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
 import jp.co.optim.video_recording_sample.record.MediaRecordManager
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import jp.co.optim.video_recording_sample.record.entity.RecordData
+import jp.co.optim.video_recording_sample.record.entity.ScreenResolution
 import jp.co.optim.video_recording_sample.record.entity.VideoData
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,7 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     private val captureRenderer = CameraCaptureRenderer(this)
 
-    private var frameSize = Size(480, 720)
+    private var resolution: ScreenResolution = ScreenResolution.UNKNOWN
 
     private var isCheckedPermissions = false
 
@@ -43,8 +46,8 @@ class MainActivity : AppCompatActivity() {
                     return@registerForActivityResult
                 }
             }
-            logI("All runtime permissions are granted. Open camera.")
-            captureRenderer.openCamera(binding.textureView, frameSize)
+            logI("All runtime permissions are granted. Show dialog.")
+            showSelectDialog()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,8 +82,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
 
         if (isCheckedPermissions) {
-            logI("Open camera.")
-            captureRenderer.openCamera(binding.textureView, frameSize)
+            openCamera()
         } else {
             logI("Check runtime permissions.")
             requestMultiplePermissions.launch(runtimePermissions)
@@ -92,6 +94,16 @@ class MainActivity : AppCompatActivity() {
 
         logI("Close camera.")
         captureRenderer.closeCamera()
+    }
+
+    private fun openCamera() {
+        if (resolution == ScreenResolution.UNKNOWN) {
+            logW("Resolution is unknown. Cannot open camera.")
+            return
+        }
+        logI("Open camera. resolution: $resolution")
+        captureRenderer.openCamera(binding.textureView, resolution.frameSize)
+        binding.textViewResolution.text = "Screen Resolution: $resolution"
     }
 
     private fun startAudio() {
@@ -111,7 +123,7 @@ class MainActivity : AppCompatActivity() {
     private fun startVideo() {
         val dir = getExternalFilesDir(null)
             ?: throw IllegalArgumentException("Cannot get parent dir.")
-        val recordData = RecordData.newVideoRecordData(dir, AudioData(), VideoData(frameSize))
+        val recordData = RecordData.newVideoRecordData(dir, AudioData(), VideoData(resolution.frameSize))
 
         logI("Start video recording.")
         recordManager.prepare(recordData)
@@ -130,5 +142,27 @@ class MainActivity : AppCompatActivity() {
         recordManager.stop()
         audioReader.stopReading()
         captureRenderer.stopRendering()
+    }
+
+    private fun showSelectDialog() {
+        val nameArray = ScreenResolution.values()
+            .filter { it != ScreenResolution.UNKNOWN }
+            .map { it.toString() }
+            .toTypedArray()
+
+        AlertDialog.Builder(this).apply {
+            setTitle("Select Screen Resolution")
+            setSingleChoiceItems(nameArray, 0) { dialog, item ->
+                resolution = ScreenResolution.convertFromString(nameArray[item])
+            }
+            setPositiveButton("Select") { dialog, id ->
+                if (resolution == ScreenResolution.UNKNOWN) resolution = ScreenResolution.SD
+                openCamera()
+            }
+            setNegativeButton("Cancel") { dialog, id ->
+                finish()
+            }
+            setCancelable(false)
+        }.show()
     }
 }
