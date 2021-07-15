@@ -9,10 +9,21 @@ import jp.co.optim.video_recording_sample.entity.AudioData
 import jp.co.optim.video_recording_sample.entity.MediaType
 import java.nio.ByteBuffer
 
+/**
+ * 音声をエンコードするためのクラス
+ * @param audioData オーディオデータ
+ * @param callback コールバック
+ */
 class AudioEncoder(
     private val audioData: AudioData,
     callback: Callback
 ): MediaEncoder(callback) {
+
+    // エンキューのタイムアウト時間 [us]
+    private val CODEC_ENQUEUE_TIMEOUT_US = 10 * 1000L
+
+    // エンコードの試行回数
+    private val ENCODE_TRY_TIMES = 10
 
     override val mediaType: MediaType = MediaType.AUDIO
 
@@ -30,6 +41,7 @@ class AudioEncoder(
         codec
     }
 
+    // リクエストタイムスタンプ [us]
     private var reqTimeStampUs = 0L
 
     override fun release() {
@@ -47,6 +59,10 @@ class AudioEncoder(
         }
     }
 
+    /**
+     * 音声バッファーをエンキューする.
+     * @param bytes 音声バッファーの情報が含まれたバイト配列
+     */
     @WorkerThread
     fun enqueueAudioBytes(bytes: ByteArray) {
         synchronized(syncEnqueue) {
@@ -67,11 +83,14 @@ class AudioEncoder(
         }
     }
 
+    /**
+     * バッファーインデックスを取得するためのインナー処理.
+     */
     @WorkerThread
     private fun dequeueInputBuffer(neverGiveUp: Boolean = false): Int? {
         var retryCount = 0
         while (retryCount < ENCODE_TRY_TIMES) {
-            val index = mediaCodec.dequeueInputBuffer(CODEC_DEQUEUE_TIMEOUT_US)
+            val index = mediaCodec.dequeueInputBuffer(CODEC_ENQUEUE_TIMEOUT_US)
             if (index < 0) {
                 when (index) {
                     MediaCodec.INFO_TRY_AGAIN_LATER -> {

@@ -9,34 +9,58 @@ import jp.co.optim.video_recording_sample.extensions.logI
 import java.nio.ByteBuffer
 import kotlin.concurrent.thread
 
+/**
+ * 音声や動画などのメディアをエンコードするための抽象クラス
+ * @param callback コールバック
+ */
 abstract class MediaEncoder(private val callback: Callback) {
 
+    /**
+     * エンコードのためのコールバック
+     */
     interface Callback {
-
+        /**
+         * エンコード処理開始.
+         * INFO_OUTPUT_FORMAT_CHANGED が呼ばれるとこのメソッドが呼び出される.
+         * @param mediaType メディアタイプ
+         * @param mediaFormat メディアフォーマット
+         */
         fun onStarted(mediaType: MediaType, mediaFormat: MediaFormat)
 
+        /**
+         * エンコードされたバッファーを書き出す.
+         * @param trackId トラックID
+         * @param buffer エンコード後のバッファー
+         * @param bufferInfo バッファー情報
+         */
         fun onEncodedBuffer(
             trackId: Int,
             buffer: ByteBuffer,
             bufferInfo: MediaCodec.BufferInfo
         )
 
+        /**
+         * エンコード処理終了.
+         */
         fun onFinished()
     }
 
-    companion object {
-        const val CODEC_DEQUEUE_TIMEOUT_US = 10 * 1000L
-        const val ENCODE_TRY_TIMES = 10
-    }
+    // デキューのタイムアウト時間 [us]
+    private val CODEC_DEQUEUE_TIMEOUT_US = 10 * 1000L
 
+    // メディアタイプ
     abstract val mediaType: MediaType
 
+    // メディアコーデック
     abstract val mediaCodec: MediaCodec
 
+    // トラックID
     var trackId: Int = -1
 
+    // レスポンスタイムスタンプ [us]
     private var resTimeStampUs = -1L
 
+    // 開始時間のタイムスタンプ [us]
     private var firstTimeStampUs = -1L
 
     // エンコードが利用可能か.
@@ -55,17 +79,26 @@ abstract class MediaEncoder(private val callback: Callback) {
     // エンキュー非同期処理用のオブジェクト.
     protected val syncEnqueue = Any()
 
+    /**
+     * エンコードを開始する.
+     */
     fun start() {
         mediaCodec.start()
         // デコード用のスレッドを開始
         thread { dequeueBuffer() }
     }
 
+    /**
+     * エンコードを終了する.
+     */
     fun stop() {
         // 別スレッドから終了を投げる.
         thread { enqueueEndStream() }
     }
 
+    /**
+     * リリース処理.
+     */
     protected open fun release() {
         mediaCodec.stop()
         mediaCodec.release()
@@ -80,9 +113,15 @@ abstract class MediaEncoder(private val callback: Callback) {
         callback.onFinished()
     }
 
+    /**
+     * エンドストリームをエンキューする.
+     */
     @WorkerThread
     protected abstract fun enqueueEndStream()
 
+    /**
+     * バッファーをデキューする.
+     */
     @WorkerThread
     private fun dequeueBuffer() {
         logI("Start dequeue.")
@@ -108,6 +147,9 @@ abstract class MediaEncoder(private val callback: Callback) {
         release()
     }
 
+    /**
+     * dequeueOutputBuffer がステータスだった場合のインナー処理.
+     */
     @WorkerThread
     private fun dequeueBufferStatus(status: Int) {
         when (status) {
@@ -120,6 +162,9 @@ abstract class MediaEncoder(private val callback: Callback) {
         }
     }
 
+    /**
+     * dequeueOutputBuffer がインデックスだった場合のインナー処理.
+     */
     @WorkerThread
     private fun dequeueBufferIndex(index: Int, bufferInfo: MediaCodec.BufferInfo) {
         logI("dequeueBufferIndex: $index")

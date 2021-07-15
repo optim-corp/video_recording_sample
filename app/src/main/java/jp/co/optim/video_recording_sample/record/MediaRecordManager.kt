@@ -15,6 +15,9 @@ import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder
 import java.nio.ByteBuffer
 
+/**
+ * 録音録画するためのマネージャークラス
+ */
 class MediaRecordManager : MediaEncoder.Callback {
 
     private var mediaMuxer: MediaMuxer? = null
@@ -31,6 +34,10 @@ class MediaRecordManager : MediaEncoder.Callback {
     // Muxer非同期処理用のオブジェクト.
     private val syncMuxer = Any()
 
+    /**
+     * データを元にパラメータの設定準備を行う.
+     * @param recordData 録音録画の情報に関するデータ
+     */
     @WorkerThread
     fun prepare(recordData: RecordData) {
         // Muxer定義
@@ -49,6 +56,9 @@ class MediaRecordManager : MediaEncoder.Callback {
         isPrepared = true
     }
 
+    /**
+     * 録音録画を開始する.
+     */
     fun start() {
         if (!isPrepared) {
             logW("Recording is not prepared.")
@@ -65,6 +75,9 @@ class MediaRecordManager : MediaEncoder.Callback {
         videoEncoder?.start()
     }
 
+    /**
+     * 録音録画を停止する.
+     */
     fun stop() {
         if (!isRecording) {
             logW("Recording is already stopped.")
@@ -76,6 +89,10 @@ class MediaRecordManager : MediaEncoder.Callback {
         videoEncoder?.stop()
     }
 
+    /**
+     * 音声バッファーを入力する.
+     * @param bytes 音声バッファーの情報が含まれたバイト配列
+     */
     @WorkerThread
     fun inputAudioBytes(bytes: ByteArray) {
         if (isRecording) {
@@ -83,6 +100,10 @@ class MediaRecordManager : MediaEncoder.Callback {
         }
     }
 
+    /**
+     * 録画用の画像を入力する.
+     * @param bitmap 画像
+     */
     @WorkerThread
     fun inputVideoBitmap(bitmap: Bitmap) {
         if (isRecording) {

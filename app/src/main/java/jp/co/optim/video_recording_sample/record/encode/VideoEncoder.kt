@@ -10,6 +10,11 @@ import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.entity.MediaType
 import jp.co.optim.video_recording_sample.entity.VideoData
 
+/**
+ * 動画をエンコードするためのクラス
+ * @param videoData ビデオデータ
+ * @param callback コールバック
+ */
 class VideoEncoder(
     private val videoData: VideoData,
     callback: Callback
@@ -32,6 +37,7 @@ class VideoEncoder(
         codec
     }
 
+    // メディアコーディックに紐づく Surface
     private val surface = mediaCodec.createInputSurface()
 
     override fun release() {
@@ -45,6 +51,10 @@ class VideoEncoder(
         }
     }
 
+    /**
+     * 録画用の画像をエンキューする.
+     * @param bitmap 画像
+     */
     @WorkerThread
     fun enqueueVideoBitmap(bitmap: Bitmap) {
         synchronized(syncEnqueue) {
