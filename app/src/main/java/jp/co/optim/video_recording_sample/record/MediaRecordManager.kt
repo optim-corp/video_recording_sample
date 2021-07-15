@@ -31,6 +31,7 @@ class MediaRecordManager : MediaEncoder.Callback {
     // Muxer非同期処理用のオブジェクト.
     private val syncMuxer = Any()
 
+    @WorkerThread
     fun prepare(recordData: RecordData) {
         // Muxer定義
         mediaMuxer = MediaMuxer(

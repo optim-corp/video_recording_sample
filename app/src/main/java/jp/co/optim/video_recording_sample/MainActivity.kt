@@ -15,6 +15,7 @@ import jp.co.optim.video_recording_sample.extensions.logW
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
 import jp.co.optim.video_recording_sample.record.MediaRecordManager
+import kotlin.concurrent.thread
 
 
 class MainActivity : AppCompatActivity() {
@@ -113,9 +114,10 @@ class MainActivity : AppCompatActivity() {
         val recordData = RecordData.newAudioRecordData(dir, AudioData())
 
         logI("Start audio recording.")
-        recordManager.prepare(recordData)
-        recordManager.start()
-
+        thread {
+            recordManager.prepare(recordData)
+            recordManager.start()
+        }
         audioReader.startReading(recordData.audioData) {
             recordManager.inputAudioBytes(it)
         }
@@ -127,9 +129,10 @@ class MainActivity : AppCompatActivity() {
         val recordData = RecordData.newVideoRecordData(dir, AudioData(), VideoData(resolution.frameSize))
 
         logI("Start video recording.")
-        recordManager.prepare(recordData)
-        recordManager.start()
-
+        thread {
+            recordManager.prepare(recordData)
+            recordManager.start()
+        }
         audioReader.startReading(recordData.audioData) {
             recordManager.inputAudioBytes(it)
         }
