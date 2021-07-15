@@ -33,15 +33,15 @@ abstract class MediaEncoder(private val callback: Callback) {
 
     abstract val mediaCodec: MediaCodec
 
-    private var resTimeStampMicros = 0L
-
-    private var firstTimeStampMicros = -1L
-
     var trackId: Int = -1
+
+    private var resTimeStampUs = -1L
+
+    private var firstTimeStampUs = -1L
 
     // エンコードが利用可能か.
     // INFO_OUTPUT_FORMAT_CHANGED が呼ばれると true
-    var isAvailable = false
+    var isFormatChanged = false
     private set
 
     // エンコード処理中かどうか.
@@ -49,9 +49,11 @@ abstract class MediaEncoder(private val callback: Callback) {
     protected var isEncoding = false
     private set
 
-    // 停止処理が呼び出されたかどうか.
-    protected var isStopRequested = false
-    private set
+    // エンドストリームが呼ばれたか.
+    protected var isCalledEndStream = false
+
+    // エンキュー非同期処理用のオブジェクト.
+    protected val syncEnqueue = Any()
 
     fun start() {
         mediaCodec.start()
@@ -60,7 +62,6 @@ abstract class MediaEncoder(private val callback: Callback) {
     }
 
     fun stop() {
-        isStopRequested = true
         // 別スレッドから終了を投げる.
         thread { enqueueEndStream() }
     }
@@ -69,10 +70,12 @@ abstract class MediaEncoder(private val callback: Callback) {
         mediaCodec.stop()
         mediaCodec.release()
 
-        isAvailable = false
+        trackId = -1
+        resTimeStampUs = -1L
+        firstTimeStampUs = -1L
+        isFormatChanged = false
         isEncoding = false
-        isStopRequested = false
-        firstTimeStampMicros = -1L
+        isCalledEndStream = false
 
         callback.onFinished()
     }
@@ -101,7 +104,7 @@ abstract class MediaEncoder(private val callback: Callback) {
                 }
             }
         }
-        logI("End dequeue. resTimeStampMicros: $resTimeStampMicros")
+        logI("End dequeue. resTimeStampUs: $resTimeStampUs")
         release()
     }
 
@@ -110,7 +113,7 @@ abstract class MediaEncoder(private val callback: Callback) {
         when (status) {
             MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                 logI("flag is INFO_OUTPUT_FORMAT_CHANGED")
-                isAvailable = true
+                isFormatChanged = true
                 callback.onStarted(mediaType, mediaCodec.outputFormat)
             }
             else -> {}
@@ -132,23 +135,24 @@ abstract class MediaEncoder(private val callback: Callback) {
                 return
             }
 
-            if (firstTimeStampMicros < 0L) {
+            if (firstTimeStampUs < 0L) {
                 // タイムスタンプ開始時間を記録する.
-                firstTimeStampMicros = bufferInfo.presentationTimeUs
+                firstTimeStampUs = bufferInfo.presentationTimeUs
             }
 
             if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                 // 終了のときは値がバグっている可能性があるので、最後のタイムスタンプ時間に +1 しておく.
-                bufferInfo.presentationTimeUs = resTimeStampMicros + 1L
+                bufferInfo.presentationTimeUs = resTimeStampUs + 1L
             } else {
-                val timestamp = bufferInfo.presentationTimeUs - firstTimeStampMicros
-                if (timestamp < resTimeStampMicros) {
+                // 開始時間を引いてタイムスタンプを再設定する.
+                val timestamp = bufferInfo.presentationTimeUs - firstTimeStampUs
+                if (timestamp < resTimeStampUs) {
                     // 前のタイムスタンプよりも進んでいないとおかしい.
-                    logE("Invalid timestamp. before: $timestamp, after: $resTimeStampMicros")
+                    logE("Invalid timestamp. before: $timestamp, after: $resTimeStampUs")
                     return
                 }
-                resTimeStampMicros = bufferInfo.presentationTimeUs - firstTimeStampMicros
-                bufferInfo.presentationTimeUs = resTimeStampMicros
+                resTimeStampUs = bufferInfo.presentationTimeUs - firstTimeStampUs
+                bufferInfo.presentationTimeUs = resTimeStampUs
             }
             logI("BufferSize: ${bufferInfo.size} TimeStamp: ${bufferInfo.presentationTimeUs}")
 

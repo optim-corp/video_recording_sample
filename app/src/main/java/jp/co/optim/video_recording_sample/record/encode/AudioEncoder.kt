@@ -30,39 +30,45 @@ class AudioEncoder(
         codec
     }
 
-    private var reqTimeStampMicros = 0L
+    private var reqTimeStampUs = 0L
+
+    override fun release() {
+        reqTimeStampUs = 0L
+        super.release()
+    }
 
     override fun enqueueEndStream() {
-        val index = dequeueInputBuffer(true)
-        mediaCodec.queueInputBuffer(
-            index, 0, 0, reqTimeStampMicros, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+        synchronized(syncEnqueue) {
+            val index = dequeueInputBuffer(true)
+            mediaCodec.queueInputBuffer(
+                index!!, 0, 0, reqTimeStampUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM
+            )
+            isCalledEndStream = true
+        }
     }
 
     @WorkerThread
     fun enqueueAudioBytes(bytes: ByteArray) {
-        // 停止が呼び出されたか、エンコード処理中でなければ何もしない.
-        if (isStopRequested || !isEncoding) return
+        synchronized(syncEnqueue) {
+            // エンドストリームが呼び出されたか、エンコード処理中でなければ何もしない.
+            if (isCalledEndStream || !isEncoding) return
 
-        // バイト配列からバッファー変換してキューに詰める.
-        enqueueBuffer(ByteBuffer.wrap(bytes), reqTimeStampMicros)
+            // バッファーから算出された時間をタイムスタンプに追加.
+            val sample = bytes.size / audioData.bytesPerSample
+            val timeIntervalMicros = 1000L * 1000L * sample / audioData.samplingRate
+            reqTimeStampUs += timeIntervalMicros
 
-        // バッファーから算出された時間をタイムスタンプに追加.
-        val sample = bytes.size / audioData.bytesPerSample
-        val timeIntervalMicros = 1000L * 1000L * sample / audioData.samplingRate
-        reqTimeStampMicros += timeIntervalMicros
+            // バイト配列からバッファー変換してキューに詰める.
+            val buffer = ByteBuffer.wrap(bytes)
+            val index = dequeueInputBuffer() ?: return
+            val inputBuffer = mediaCodec.getInputBuffer(index) ?: return
+            inputBuffer.put(buffer)
+            mediaCodec.queueInputBuffer(index, 0, buffer.capacity(), reqTimeStampUs, 0)
+        }
     }
 
     @WorkerThread
-    private fun enqueueBuffer(buffer: ByteBuffer, timeStampMicros: Long) {
-        val index = dequeueInputBuffer()
-        if (index < 0) return
-        val inputBuffer = mediaCodec.getInputBuffer(index) ?: return
-        inputBuffer.put(buffer)
-        mediaCodec.queueInputBuffer(index, 0, buffer.capacity(), timeStampMicros, 0)
-    }
-
-    @WorkerThread
-    private fun dequeueInputBuffer(neverGiveUp: Boolean = false): Int {
+    private fun dequeueInputBuffer(neverGiveUp: Boolean = false): Int? {
         var retryCount = 0
         while (retryCount < ENCODE_TRY_TIMES) {
             val index = mediaCodec.dequeueInputBuffer(CODEC_DEQUEUE_TIMEOUT_US)
@@ -77,6 +83,6 @@ class AudioEncoder(
                 return index
             }
         }
-        return -1
+        return null
     }
 }

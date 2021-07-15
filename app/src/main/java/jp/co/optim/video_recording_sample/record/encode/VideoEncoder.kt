@@ -40,16 +40,20 @@ class VideoEncoder(
     }
 
     override fun enqueueEndStream() {
-        mediaCodec.signalEndOfInputStream()
+        synchronized(syncEnqueue) {
+            mediaCodec.signalEndOfInputStream()
+        }
     }
 
     @WorkerThread
     fun enqueueVideoBitmap(bitmap: Bitmap) {
-        // 停止が呼び出されたか、エンコード処理中でなければ何もしない.
-        if (isStopRequested || !isEncoding) return
+        synchronized(syncEnqueue) {
+            // エンドストリームが呼び出されたか、エンコード処理中でなければ何もしない.
+            if (isCalledEndStream || !isEncoding) return
 
-        val canvas = surface.lockCanvas(Rect(0, 0, bitmap.width, bitmap.height))
-        canvas.drawBitmap(bitmap, 0f, 0f, Paint())
-        surface.unlockCanvasAndPost(canvas)
+            val canvas = surface.lockCanvas(Rect(0, 0, bitmap.width, bitmap.height))
+            canvas.drawBitmap(bitmap, 0f, 0f, Paint())
+            surface.unlockCanvasAndPost(canvas)
+        }
     }
 }

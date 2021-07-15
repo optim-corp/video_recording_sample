@@ -26,7 +26,10 @@ class MediaRecordManager : MediaEncoder.Callback {
     private var isRecording = false
 
     private val isEncodeAvailable: Boolean get() =
-        and(audioEncoder?.isAvailable, videoEncoder?.isAvailable)
+        and(audioEncoder?.isFormatChanged, videoEncoder?.isFormatChanged)
+
+    // Muxer非同期処理用のオブジェクト.
+    private val syncMuxer = Any()
 
     fun prepare(recordData: RecordData) {
         // Muxer定義
@@ -74,16 +77,20 @@ class MediaRecordManager : MediaEncoder.Callback {
 
     @WorkerThread
     fun inputAudioBytes(bytes: ByteArray) {
-        audioEncoder?.enqueueAudioBytes(bytes)
+        if (isRecording) {
+            audioEncoder?.enqueueAudioBytes(bytes)
+        }
     }
 
     @WorkerThread
     fun inputVideoBitmap(bitmap: Bitmap) {
-        videoEncoder?.enqueueVideoBitmap(bitmap)
+        if (isRecording) {
+            videoEncoder?.enqueueVideoBitmap(bitmap)
+        }
     }
 
     override fun onStarted(mediaType: MediaType, mediaFormat: MediaFormat) {
-        synchronized(this) {
+        synchronized(syncMuxer) {
             when (mediaType) {
                 MediaType.AUDIO -> {
                     audioEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
@@ -107,7 +114,7 @@ class MediaRecordManager : MediaEncoder.Callback {
         buffer: ByteBuffer,
         bufferInfo: MediaCodec.BufferInfo
     ) {
-        synchronized(this) {
+        synchronized(syncMuxer) {
             if (isEncodeAvailable) {
                 logI("writeSampleData: $trackId")
                 mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
@@ -116,7 +123,7 @@ class MediaRecordManager : MediaEncoder.Callback {
     }
 
     override fun onFinished() {
-        synchronized(this) {
+        synchronized(syncMuxer) {
             if (!isEncodeAvailable && mediaMuxer != null) {
                 // AudioとVideoのエンコードが両方完了してからMuxerをリリースする.
                 mediaMuxer?.release()
