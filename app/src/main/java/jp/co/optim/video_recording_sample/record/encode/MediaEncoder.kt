@@ -27,6 +27,7 @@ abstract class MediaEncoder(private val callback: Callback) {
          * @param mediaType メディアタイプ
          * @param mediaFormat メディアフォーマット
          */
+        @WorkerThread
         fun onStarted(mediaType: MediaType, mediaFormat: MediaFormat)
 
         /**
@@ -35,6 +36,7 @@ abstract class MediaEncoder(private val callback: Callback) {
          * @param buffer エンコード後のバッファー
          * @param bufferInfo バッファー情報
          */
+        @WorkerThread
         fun onEncodedBuffer(
             trackId: Int,
             buffer: ByteBuffer,
@@ -44,6 +46,7 @@ abstract class MediaEncoder(private val callback: Callback) {
         /**
          * エンコード処理終了.
          */
+        @WorkerThread
         fun onFinished()
     }
 
@@ -112,7 +115,6 @@ abstract class MediaEncoder(private val callback: Callback) {
         lockDequeue.withLock {
             if (!isEncoding) {
                 logI("Encode is already stopped.")
-                callback.onFinished()
                 return
             }
             // 別スレッドから終了を投げる.
