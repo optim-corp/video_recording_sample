@@ -8,6 +8,7 @@ import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.entity.AudioData
 import jp.co.optim.video_recording_sample.entity.MediaType
 import java.nio.ByteBuffer
+import kotlin.concurrent.withLock
 
 /**
  * 音声をエンコードするためのクラス
@@ -50,7 +51,7 @@ class AudioEncoder(
     }
 
     override fun enqueueEndStream() {
-        synchronized(syncEnqueue) {
+        lockEnqueue.withLock {
             val index = dequeueInputBuffer(true)
             mediaCodec.queueInputBuffer(
                 index!!, 0, 0, reqTimeStampUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM
@@ -65,7 +66,7 @@ class AudioEncoder(
      */
     @WorkerThread
     fun enqueueAudioBytes(bytes: ByteArray) {
-        synchronized(syncEnqueue) {
+        lockEnqueue.withLock {
             // エンドストリームが呼び出されたか、エンコード処理中でなければ何もしない.
             if (isCalledEndStream || !isEncoding) return
 

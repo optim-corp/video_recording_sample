@@ -9,6 +9,7 @@ import android.media.MediaFormat
 import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.entity.MediaType
 import jp.co.optim.video_recording_sample.entity.VideoData
+import kotlin.concurrent.withLock
 
 /**
  * 動画をエンコードするためのクラス
@@ -46,7 +47,7 @@ class VideoEncoder(
     }
 
     override fun enqueueEndStream() {
-        synchronized(syncEnqueue) {
+        lockEnqueue.withLock {
             mediaCodec.signalEndOfInputStream()
         }
     }
@@ -57,7 +58,7 @@ class VideoEncoder(
      */
     @WorkerThread
     fun enqueueVideoBitmap(bitmap: Bitmap) {
-        synchronized(syncEnqueue) {
+        lockEnqueue.withLock {
             // エンドストリームが呼び出されたか、エンコード処理中でなければ何もしない.
             if (isCalledEndStream || !isEncoding) return
 

@@ -7,6 +7,7 @@ import jp.co.optim.video_recording_sample.entity.MediaType
 import jp.co.optim.video_recording_sample.extensions.logE
 import jp.co.optim.video_recording_sample.extensions.logI
 import java.nio.ByteBuffer
+import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 
 /**
@@ -77,7 +78,7 @@ abstract class MediaEncoder(private val callback: Callback) {
     protected var isCalledEndStream = false
 
     // エンキュー非同期処理用のオブジェクト.
-    protected val syncEnqueue = Any()
+    protected val lockEnqueue = ReentrantLock()
 
     /**
      * エンコードを開始する.

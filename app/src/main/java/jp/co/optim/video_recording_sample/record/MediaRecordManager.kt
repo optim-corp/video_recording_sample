@@ -14,6 +14,8 @@ import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
 import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder
 import java.nio.ByteBuffer
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * 録音録画するためのマネージャークラス
@@ -32,7 +34,7 @@ class MediaRecordManager : MediaEncoder.Callback {
         and(audioEncoder?.isFormatChanged, videoEncoder?.isFormatChanged)
 
     // Muxer非同期処理用のオブジェクト.
-    private val syncMuxer = Any()
+    private val lockMuxer = ReentrantLock()
 
     /**
      * データを元にパラメータの設定準備を行う.
@@ -112,7 +114,7 @@ class MediaRecordManager : MediaEncoder.Callback {
     }
 
     override fun onStarted(mediaType: MediaType, mediaFormat: MediaFormat) {
-        synchronized(syncMuxer) {
+        lockMuxer.withLock {
             when (mediaType) {
                 MediaType.AUDIO -> {
                     audioEncoder?.trackId = mediaMuxer?.addTrack(mediaFormat) ?: -1
@@ -136,7 +138,7 @@ class MediaRecordManager : MediaEncoder.Callback {
         buffer: ByteBuffer,
         bufferInfo: MediaCodec.BufferInfo
     ) {
-        synchronized(syncMuxer) {
+        lockMuxer.withLock {
             if (isEncodeAvailable) {
                 logI("writeSampleData: $trackId")
                 mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
@@ -145,7 +147,7 @@ class MediaRecordManager : MediaEncoder.Callback {
     }
 
     override fun onFinished() {
-        synchronized(syncMuxer) {
+        lockMuxer.withLock {
             if (!isEncodeAvailable && mediaMuxer != null) {
                 // AudioとVideoのエンコードが両方完了してからMuxerをリリースする.
                 mediaMuxer?.release()
