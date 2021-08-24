@@ -9,6 +9,7 @@ import jp.co.optim.video_recording_sample.extensions.logI
 import java.nio.ByteBuffer
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
+import kotlin.concurrent.withLock
 
 /**
  * 音声や動画などのメディアをエンコードするための抽象クラス
@@ -80,21 +81,43 @@ abstract class MediaEncoder(private val callback: Callback) {
     // エンキュー非同期処理用のオブジェクト.
     protected val lockEnqueue = ReentrantLock()
 
+    // デキュー排他制御用のオブジェクト.
+    private val lockDequeue = ReentrantLock()
+
     /**
      * エンコードを開始する.
      */
     fun start() {
-        mediaCodec.start()
-        // デコード用のスレッドを開始
-        thread { dequeueBuffer() }
+        lockDequeue.withLock {
+            if (isEncoding) {
+                logI("Encode is already started.")
+                return
+            }
+            try {
+                // コーディック処理開始.
+                mediaCodec.start()
+                // デキュー処理開始. デキュー専用の別スレッドを立ち上げる.
+                thread { dequeueBuffer() }
+            } catch (e: Exception) {
+                logE("Failed to start mediaCodec.")
+                callback.onFinished()
+            }
+        }
     }
 
     /**
      * エンコードを終了する.
      */
     fun stop() {
-        // 別スレッドから終了を投げる.
-        thread { enqueueEndStream() }
+        lockDequeue.withLock {
+            if (!isEncoding) {
+                logI("Encode is already stopped.")
+                callback.onFinished()
+                return
+            }
+            // 別スレッドから終了を投げる.
+            thread { enqueueEndStream() }
+        }
     }
 
     /**
@@ -130,17 +153,20 @@ abstract class MediaEncoder(private val callback: Callback) {
         val bufferInfo = MediaCodec.BufferInfo()
 
         while (isEncoding) {
-            val indexOrStatus = mediaCodec.dequeueOutputBuffer(bufferInfo, CODEC_DEQUEUE_TIMEOUT_US)
+            lockDequeue.withLock {
+                val indexOrStatus =
+                    mediaCodec.dequeueOutputBuffer(bufferInfo, CODEC_DEQUEUE_TIMEOUT_US)
 
-            if (indexOrStatus < 0) {
-                // 0未満の場合はステータスチェック.
-                dequeueBufferStatus(indexOrStatus)
-            } else {
-                dequeueBufferIndex(indexOrStatus, bufferInfo)
-                // ストリーム終了フラグの場合は終了する.
-                if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                    logI("Flag is BUFFER_FLAG_END_OF_STREAM")
-                    isEncoding = false
+                if (indexOrStatus < 0) {
+                    // 0未満の場合はステータスチェック.
+                    dequeueBufferStatus(indexOrStatus)
+                } else {
+                    dequeueBufferIndex(indexOrStatus, bufferInfo)
+                    // ストリーム終了フラグの場合は終了する.
+                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                        logI("Flag is BUFFER_FLAG_END_OF_STREAM")
+                        isEncoding = false
+                    }
                 }
             }
         }
