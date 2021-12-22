@@ -7,8 +7,8 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.entity.MediaType
-import jp.co.optim.video_recording_sample.entity.VideoData
+import jp.co.optim.video_recording_sample.record.entity.MediaType
+import jp.co.optim.video_recording_sample.record.entity.VideoData
 import kotlin.concurrent.withLock
 
 /**

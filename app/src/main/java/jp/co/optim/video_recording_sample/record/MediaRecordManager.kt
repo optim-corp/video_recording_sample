@@ -5,14 +5,14 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.entity.MediaType
-import jp.co.optim.video_recording_sample.entity.RecordData
 import jp.co.optim.video_recording_sample.extensions.and
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.extensions.logW
 import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
 import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder
+import jp.co.optim.video_recording_sample.record.entity.MediaType
+import jp.co.optim.video_recording_sample.record.entity.RecordData
 import java.nio.ByteBuffer
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
