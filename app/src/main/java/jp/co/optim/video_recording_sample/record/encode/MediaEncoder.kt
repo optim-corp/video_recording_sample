@@ -91,20 +91,19 @@ abstract class MediaEncoder(private val callback: Callback) {
      * エンコードを開始する.
      */
     fun start() {
-        lockDequeue.withLock {
-            if (isEncoding) {
-                logI("Encode is already started.")
-                return
-            }
-            try {
-                // コーディック処理開始.
-                mediaCodec.start()
-                // デキュー処理開始. デキュー専用の別スレッドを立ち上げる.
-                thread { dequeueBuffer() }
-            } catch (e: Exception) {
-                logE("Failed to start mediaCodec.")
-                callback.onFinished()
-            }
+        if (isEncoding) {
+            logI("Encode is already started.")
+            return
+        }
+        logI("Start encoder.")
+        try {
+            // コーディック処理開始.
+            mediaCodec.start()
+            // デキュー処理開始. デキュー専用の別スレッドを立ち上げる.
+            thread { dequeueBuffer() }
+        } catch (e: Exception) {
+            logE("Failed to start mediaCodec.")
+            callback.onFinished()
         }
     }
 
@@ -112,20 +111,20 @@ abstract class MediaEncoder(private val callback: Callback) {
      * エンコードを終了する.
      */
     fun stop() {
-        lockDequeue.withLock {
-            if (!isEncoding) {
-                logI("Encode is already stopped.")
-                return
-            }
-            // 別スレッドから終了を投げる.
-            thread { enqueueEndStream() }
+        if (!isEncoding) {
+            logI("Encode is already stopped.")
+            return
         }
+        logI("Stop encoder.")
+        enqueueEndStream()
     }
 
     /**
      * リリース処理.
      */
     protected open fun release() {
+        logI("Release encoder.")
+
         mediaCodec.stop()
         mediaCodec.release()
 

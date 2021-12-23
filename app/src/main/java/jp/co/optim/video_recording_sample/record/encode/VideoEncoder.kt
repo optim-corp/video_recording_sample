@@ -7,6 +7,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
+import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.record.entity.MediaType
 import jp.co.optim.video_recording_sample.record.entity.VideoData
 import kotlin.concurrent.withLock
@@ -48,6 +49,7 @@ class VideoEncoder(
 
     override fun enqueueEndStream() {
         lockEnqueue.withLock {
+            logI("Enqueue end stream.")
             mediaCodec.signalEndOfInputStream()
         }
     }

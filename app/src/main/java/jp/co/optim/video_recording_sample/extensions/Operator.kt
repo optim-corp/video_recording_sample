@@ -7,3 +7,11 @@ fun and(vararg values: Boolean?): Boolean {
     }
     return ret ?: false
 }
+
+fun or(vararg flags: Boolean?): Boolean {
+    var ret: Boolean? = null
+    flags.forEach {
+        ret = if (it != null) ret?.or(it) ?: it else ret
+    }
+    return ret ?: false
+}

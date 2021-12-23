@@ -8,6 +8,7 @@ import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.extensions.and
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.extensions.logW
+import jp.co.optim.video_recording_sample.extensions.or
 import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
 import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder
@@ -30,8 +31,13 @@ class MediaRecordManager : MediaEncoder.Callback {
     private var isStarted = false
     private var isRecording = false
 
+    // エンコードが利用可能か.
     private val isEncodeAvailable: Boolean get() =
         and(audioEncoder?.isFormatChanged, videoEncoder?.isFormatChanged)
+
+    // エンコード中か.
+    private val isEncodeRunning: Boolean get() =
+        or(audioEncoder?.isFormatChanged, videoEncoder?.isFormatChanged)
 
     // Muxer非同期処理用のオブジェクト.
     private val lockMuxer = ReentrantLock()
@@ -148,20 +154,30 @@ class MediaRecordManager : MediaEncoder.Callback {
 
     override fun onFinished() {
         lockMuxer.withLock {
-            if (!isEncodeAvailable && mediaMuxer != null) {
-                // AudioとVideoのエンコードが両方完了してからMuxerをリリースする.
-                mediaMuxer?.release()
-
-                // リセット.
-                mediaMuxer = null
-                audioEncoder = null
-                videoEncoder = null
-                isPrepared = false
-                isStarted = false
-                isRecording = false
-
-                logI("Recording is completed!")
+            // Audio もしくは Video のエンコード処理が終わっていないかチェック.
+            if (isEncodeRunning) {
+                logI("Encoder is still running.")
+                return
             }
+            // Muxer がリリース済かチェック.
+            if (mediaMuxer == null) {
+                logI("Muxer is already released.")
+                return
+            }
+
+            // Muxer をリリースする.
+            logI("Release muxer.")
+            mediaMuxer?.release()
+
+            // リセット.
+            mediaMuxer = null
+            audioEncoder = null
+            videoEncoder = null
+            isPrepared = false
+            isStarted = false
+            isRecording = false
+
+            logI("Recording is completed!")
         }
     }
 }

@@ -5,6 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
+import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import jp.co.optim.video_recording_sample.record.entity.MediaType
 import java.nio.ByteBuffer
@@ -52,6 +53,7 @@ class AudioEncoder(
 
     override fun enqueueEndStream() {
         lockEnqueue.withLock {
+            logI("Enqueue end stream.")
             val index = dequeueInputBuffer(true)
             mediaCodec.queueInputBuffer(
                 index!!, 0, 0, reqTimeStampUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM
