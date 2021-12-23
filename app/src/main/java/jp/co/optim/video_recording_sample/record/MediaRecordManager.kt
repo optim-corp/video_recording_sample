@@ -5,10 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.extensions.and
-import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.extensions.logW
-import jp.co.optim.video_recording_sample.extensions.or
+import jp.co.optim.video_recording_sample.extensions.*
 import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
 import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder
@@ -134,7 +131,11 @@ class MediaRecordManager : MediaEncoder.Callback {
             // フォーマットをトラックに追加し終わったら Muxer を開始できる.
             if (isEncodeAvailable) {
                 logI("Start mediaMuxer.")
-                mediaMuxer?.start()
+                try {
+                    mediaMuxer?.start()
+                } catch (e: IllegalStateException) {
+                    logE("Failed to start mediaMuxer.")
+                }
             }
         }
     }
@@ -146,8 +147,11 @@ class MediaRecordManager : MediaEncoder.Callback {
     ) {
         lockMuxer.withLock {
             if (isEncodeAvailable) {
-                logI("writeSampleData: $trackId")
-                mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
+                try {
+                    mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
+                } catch (e: Exception) {
+                    logE("Failed to write sample data.")
+                }
             }
         }
     }
@@ -165,19 +169,25 @@ class MediaRecordManager : MediaEncoder.Callback {
                 return
             }
 
-            // Muxer をリリースする.
-            logI("Release muxer.")
-            mediaMuxer?.release()
+            // Muxer を停止＆リリースする.
+            logI("Stop mediaMuxer.")
+            try {
+                mediaMuxer?.stop()
+            } catch (e: IllegalStateException) {
+                logE("Failed to stop mediaMuxer.")
+            } finally {
+                mediaMuxer?.release()
 
-            // リセット.
-            mediaMuxer = null
-            audioEncoder = null
-            videoEncoder = null
-            isPrepared = false
-            isStarted = false
-            isRecording = false
+                // リセット.
+                mediaMuxer = null
+                audioEncoder = null
+                videoEncoder = null
+                isPrepared = false
+                isStarted = false
+                isRecording = false
 
-            logI("Recording is completed!")
+                logI("Recording is completed!")
+            }
         }
     }
 }

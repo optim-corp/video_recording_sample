@@ -3,9 +3,9 @@ package jp.co.optim.video_recording_sample.record.encode
 import android.media.MediaCodec
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.record.entity.MediaType
 import jp.co.optim.video_recording_sample.extensions.logE
 import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.record.entity.MediaType
 import java.nio.ByteBuffer
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
@@ -124,18 +124,21 @@ abstract class MediaEncoder(private val callback: Callback) {
      */
     protected open fun release() {
         logI("Release encoder.")
+        try {
+            mediaCodec.stop()
+            mediaCodec.release()
+        } catch (e: IllegalStateException) {
+            logE("MediaCodec is already released.")
+        } finally {
+            trackId = -1
+            resTimeStampUs = -1L
+            firstTimeStampUs = -1L
+            isFormatChanged = false
+            isEncoding = false
+            isCalledEndStream = false
 
-        mediaCodec.stop()
-        mediaCodec.release()
-
-        trackId = -1
-        resTimeStampUs = -1L
-        firstTimeStampUs = -1L
-        isFormatChanged = false
-        isEncoding = false
-        isCalledEndStream = false
-
-        callback.onFinished()
+            callback.onFinished()
+        }
     }
 
     /**
@@ -151,28 +154,32 @@ abstract class MediaEncoder(private val callback: Callback) {
     private fun dequeueBuffer() {
         logI("Start dequeue.")
         isEncoding = true
-        val bufferInfo = MediaCodec.BufferInfo()
+        try {
+            val bufferInfo = MediaCodec.BufferInfo()
+            while (isEncoding) {
+                lockDequeue.withLock {
+                    val indexOrStatus =
+                        mediaCodec.dequeueOutputBuffer(bufferInfo, CODEC_DEQUEUE_TIMEOUT_US)
 
-        while (isEncoding) {
-            lockDequeue.withLock {
-                val indexOrStatus =
-                    mediaCodec.dequeueOutputBuffer(bufferInfo, CODEC_DEQUEUE_TIMEOUT_US)
-
-                if (indexOrStatus < 0) {
-                    // 0未満の場合はステータスチェック.
-                    dequeueBufferStatus(indexOrStatus)
-                } else {
-                    dequeueBufferIndex(indexOrStatus, bufferInfo)
-                    // ストリーム終了フラグの場合は終了する.
-                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                        logI("Flag is BUFFER_FLAG_END_OF_STREAM")
-                        isEncoding = false
+                    if (indexOrStatus < 0) {
+                        // 0未満の場合はステータスチェック.
+                        dequeueBufferStatus(indexOrStatus)
+                    } else {
+                        dequeueBufferIndex(indexOrStatus, bufferInfo)
+                        // ストリーム終了フラグの場合は終了する.
+                        if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            logI("Flag is BUFFER_FLAG_END_OF_STREAM")
+                            isEncoding = false
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
+            logE("Failed to dequeue buffer.")
+        } finally {
+            logI("End dequeue. resTimeStampUs: $resTimeStampUs")
+            release()
         }
-        logI("End dequeue. resTimeStampUs: $resTimeStampUs")
-        release()
     }
 
     /**
