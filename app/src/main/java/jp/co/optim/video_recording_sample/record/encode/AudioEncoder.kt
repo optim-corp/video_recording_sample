@@ -46,9 +46,9 @@ class AudioEncoder(
     // リクエストタイムスタンプ [us]
     private var reqTimeStampUs = 0L
 
-    override fun release() {
+    override fun release(t: Throwable?) {
         reqTimeStampUs = 0L
-        super.release()
+        super.release(t)
     }
 
     override fun enqueueEndStream() {

@@ -45,9 +45,10 @@ abstract class MediaEncoder(private val callback: Callback) {
 
         /**
          * エンコード処理終了.
+         * @param t 異常終了した場合の原因、正常終了の場合は null
          */
         @WorkerThread
-        fun onFinished()
+        fun onFinished(t: Throwable?)
     }
 
     // デキューのタイムアウト時間 [us]
@@ -103,7 +104,7 @@ abstract class MediaEncoder(private val callback: Callback) {
             thread { dequeueBuffer() }
         } catch (e: Exception) {
             logE("Failed to start mediaCodec.")
-            callback.onFinished()
+            callback.onFinished(e)
         }
     }
 
@@ -122,7 +123,7 @@ abstract class MediaEncoder(private val callback: Callback) {
     /**
      * リリース処理.
      */
-    protected open fun release() {
+    protected open fun release(t: Throwable?) {
         logI("Release encoder.")
         try {
             mediaCodec.stop()
@@ -137,7 +138,7 @@ abstract class MediaEncoder(private val callback: Callback) {
             isEncoding = false
             isCalledEndStream = false
 
-            callback.onFinished()
+            callback.onFinished(t)
         }
     }
 
@@ -154,6 +155,7 @@ abstract class MediaEncoder(private val callback: Callback) {
     private fun dequeueBuffer() {
         logI("Start dequeue.")
         isEncoding = true
+        var t: Throwable? = null
         try {
             val bufferInfo = MediaCodec.BufferInfo()
             while (isEncoding) {
@@ -176,9 +178,10 @@ abstract class MediaEncoder(private val callback: Callback) {
             }
         } catch (e: Exception) {
             logE("Failed to dequeue buffer.")
+            t = e
         } finally {
             logI("End dequeue. resTimeStampUs: $resTimeStampUs")
-            release()
+            release(t)
         }
     }
 

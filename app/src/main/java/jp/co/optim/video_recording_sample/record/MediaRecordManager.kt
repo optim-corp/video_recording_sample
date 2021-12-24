@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.os.Handler
+import android.os.Looper
+import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.extensions.*
 import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
@@ -16,9 +19,31 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * 録音録画するためのマネージャークラス
+ * レコード処理するためのマネージャークラス
+ * 音声録音や録画することが可能でファイルに出力する.
  */
 class MediaRecordManager : MediaEncoder.Callback {
+
+    /**
+     * ステータス通知ためのコールバック
+     */
+    interface Callback {
+        /**
+         * レコード処理開始.
+         */
+        @MainThread
+        fun onStarted()
+
+        /**
+         * レコード処理終了.
+         * @param t 異常終了した場合の原因、正常終了の場合は null
+         */
+        @MainThread
+        fun onFinished(t: Throwable?)
+    }
+
+    private var callback: Callback? = null
+    private var mainHandler = Handler(Looper.getMainLooper())
 
     private var mediaMuxer: MediaMuxer? = null
     private var audioEncoder: AudioEncoder? = null
@@ -41,28 +66,34 @@ class MediaRecordManager : MediaEncoder.Callback {
 
     /**
      * データを元にパラメータの設定準備を行う.
-     * @param recordData 録音録画の情報に関するデータ
+     * @param recordData レコード情報に関するデータ
+     * @param callback ステータス通知ためのコールバック
      */
     @WorkerThread
-    fun prepare(recordData: RecordData) {
-        // Muxer定義
-        mediaMuxer = MediaMuxer(
-            recordData.recFile.canonicalPath,
-            MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
-        )
-        // AudioEncoder定義
-        if (recordData.audioData.isAvailable()) {
-            audioEncoder = AudioEncoder(recordData.audioData, this)
+    fun prepare(recordData: RecordData, callback: Callback?) {
+        try {
+            // Muxer定義
+            mediaMuxer = MediaMuxer(
+                recordData.recFile.canonicalPath,
+                MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+            )
+            // AudioEncoder定義
+            if (recordData.audioData.isAvailable()) {
+                audioEncoder = AudioEncoder(recordData.audioData, this)
+            }
+            // VideoEncoder定義
+            if (recordData.videoData.isAvailable()) {
+                videoEncoder = VideoEncoder(recordData.videoData, this)
+            }
+            isPrepared = true
+            this.callback = callback
+        } catch (e: Exception) {
+            logE("Failed to prepare recording.")
         }
-        // VideoEncoder定義
-        if (recordData.videoData.isAvailable()) {
-            videoEncoder = VideoEncoder(recordData.videoData, this)
-        }
-        isPrepared = true
     }
 
     /**
-     * 録音録画を開始する.
+     * レコード開始する.
      */
     fun start() {
         if (!isPrepared) {
@@ -81,7 +112,7 @@ class MediaRecordManager : MediaEncoder.Callback {
     }
 
     /**
-     * 録音録画を停止する.
+     * レコード停止する.
      */
     fun stop() {
         if (!isRecording) {
@@ -133,6 +164,9 @@ class MediaRecordManager : MediaEncoder.Callback {
                 logI("Start mediaMuxer.")
                 try {
                     mediaMuxer?.start()
+                    callback?.let {
+                        mainHandler.post { it.onStarted() }
+                    }
                 } catch (e: IllegalStateException) {
                     logE("Failed to start mediaMuxer.")
                 }
@@ -148,6 +182,7 @@ class MediaRecordManager : MediaEncoder.Callback {
         lockMuxer.withLock {
             if (isEncodeAvailable) {
                 try {
+                    logI("Write sample data. trackId: $trackId")
                     mediaMuxer?.writeSampleData(trackId, buffer, bufferInfo)
                 } catch (e: Exception) {
                     logE("Failed to write sample data.")
@@ -156,7 +191,7 @@ class MediaRecordManager : MediaEncoder.Callback {
         }
     }
 
-    override fun onFinished() {
+    override fun onFinished(t: Throwable?) {
         lockMuxer.withLock {
             // Audio もしくは Video のエンコード処理が終わっていないかチェック.
             if (isEncodeRunning) {
@@ -187,6 +222,10 @@ class MediaRecordManager : MediaEncoder.Callback {
                 isRecording = false
 
                 logI("Recording is completed!")
+                callback?.let {
+                    mainHandler.post { it.onFinished(t) }
+                }
+                callback = null
             }
         }
     }

@@ -42,9 +42,9 @@ class VideoEncoder(
     // メディアコーディックに紐づく Surface
     private val surface = mediaCodec.createInputSurface()
 
-    override fun release() {
+    override fun release(t: Throwable?) {
         surface.release()
-        super.release()
+        super.release(t)
     }
 
     override fun enqueueEndStream() {
