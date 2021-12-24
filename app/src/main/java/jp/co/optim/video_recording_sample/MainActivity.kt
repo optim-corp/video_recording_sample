@@ -2,6 +2,7 @@ package jp.co.optim.video_recording_sample
 
 import android.Manifest
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -51,6 +52,22 @@ class MainActivity : AppCompatActivity() {
             showSelectDialog()
         }
 
+    private val recordCallback = object : MediaRecordManager.Callback {
+        override fun onStarted() {
+            setButtonsEnabled(isStartEnabled = false, isStopEnabled = true)
+        }
+        override fun onFinished(t: Throwable?) {
+            setButtonsEnabled(isStartEnabled = true, isStopEnabled = false)
+            t?.let {
+                Toast.makeText(
+                    this@MainActivity,
+                    R.string.finished_record_abnormally_toast_message,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -58,25 +75,20 @@ class MainActivity : AppCompatActivity() {
 
         binding.buttonStartAudio.setOnClickListener {
             logI("Clicked start audio button.")
-            binding.buttonStartAudio.isEnabled = false
-            binding.buttonStartVideo.isEnabled = false
-            binding.buttonStop.isEnabled = true
+            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
             startAudio()
         }
         binding.buttonStartVideo.setOnClickListener {
             logI("Clicked start video button.")
-            binding.buttonStartAudio.isEnabled = false
-            binding.buttonStartVideo.isEnabled = false
-            binding.buttonStop.isEnabled = true
+            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
             startVideo()
         }
         binding.buttonStop.setOnClickListener {
             logI("Clicked stop button.")
-            binding.buttonStartAudio.isEnabled = true
-            binding.buttonStartVideo.isEnabled = true
-            binding.buttonStop.isEnabled = false
+            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
             stopAll()
         }
+        setButtonsEnabled(isStartEnabled = true, isStopEnabled = false)
     }
 
     override fun onResume() {
@@ -115,7 +127,7 @@ class MainActivity : AppCompatActivity() {
 
         logI("Start audio recording.")
         thread {
-            recordManager.prepare(recordData)
+            recordManager.prepare(recordData, recordCallback)
             recordManager.start()
         }
         audioReader.startReading(recordData.audioData) {
@@ -130,7 +142,7 @@ class MainActivity : AppCompatActivity() {
 
         logI("Start video recording.")
         thread {
-            recordManager.prepare(recordData)
+            recordManager.prepare(recordData, recordCallback)
             recordManager.start()
         }
         audioReader.startReading(recordData.audioData) {
@@ -168,5 +180,11 @@ class MainActivity : AppCompatActivity() {
             }
             setCancelable(false)
         }.show()
+    }
+
+    private fun setButtonsEnabled(isStartEnabled: Boolean, isStopEnabled: Boolean) {
+        binding.buttonStartAudio.isEnabled = isStartEnabled
+        binding.buttonStartVideo.isEnabled = isStartEnabled
+        binding.buttonStop.isEnabled = isStopEnabled
     }
 }

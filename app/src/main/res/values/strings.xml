@@ -9,4 +9,6 @@
 
     <string name="select_dialog_title">Select Screen Resolution</string>
     <string name="resolution_text_message">Screen Resolution: %s</string>
+
+    <string name="finished_record_abnormally_toast_message">Record is finished abnormally.</string>
 </resources>
