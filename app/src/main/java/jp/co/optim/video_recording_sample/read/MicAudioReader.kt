@@ -1,5 +1,6 @@
 package jp.co.optim.video_recording_sample.read
 
+import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -28,6 +29,7 @@ class MicAudioReader {
             )
         ) * audioData.bytesPerSample
 
+        @SuppressLint("MissingPermission")
         val audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             audioData.samplingRate,

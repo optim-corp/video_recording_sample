@@ -109,6 +109,7 @@ class CameraCaptureRenderer(private val context: Context) {
                 )
             )
         } else {
+            @Suppress("DEPRECATION")
             cameraDevice?.createCaptureSession(
                 listOf(surface), sessionStateCallback, null)
         }
