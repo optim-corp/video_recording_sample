@@ -55,10 +55,10 @@ abstract class MediaEncoder(private val callback: Callback) {
     private val CODEC_DEQUEUE_TIMEOUT_US = 10 * 1000L
 
     // メディアタイプ
-    abstract val mediaType: MediaType
+    protected abstract val mediaType: MediaType
 
     // メディアコーデック
-    abstract val mediaCodec: MediaCodec
+    protected abstract val mediaCodec: MediaCodec
 
     // トラックID
     var trackId: Int = -1
