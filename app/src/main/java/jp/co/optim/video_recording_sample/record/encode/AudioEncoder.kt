@@ -21,11 +21,13 @@ class AudioEncoder(
     callback: Callback
 ): MediaEncoder(callback) {
 
-    // エンキューのタイムアウト時間 [us]
-    private val CODEC_ENQUEUE_TIMEOUT_US = 10 * 1000L
+    companion object {
+        // エンキューのタイムアウト時間 [us]
+        private const val CODEC_ENQUEUE_TIMEOUT_US = 10 * 1000L
 
-    // エンコードの試行回数
-    private val ENCODE_TRY_TIMES = 10
+        // エンコードの試行回数
+        private const val ENCODE_TRY_TIMES = 10
+    }
 
     override val mediaType: MediaType = MediaType.AUDIO
 

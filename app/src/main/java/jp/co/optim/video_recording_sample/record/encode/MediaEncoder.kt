@@ -51,8 +51,10 @@ abstract class MediaEncoder(private val callback: Callback) {
         fun onFinished(t: Throwable?)
     }
 
-    // デキューのタイムアウト時間 [us]
-    private val CODEC_DEQUEUE_TIMEOUT_US = 10 * 1000L
+    companion object {
+        // デキューのタイムアウト時間 [us]
+        private const val CODEC_DEQUEUE_TIMEOUT_US = 10 * 1000L
+    }
 
     // メディアタイプ
     protected abstract val mediaType: MediaType
