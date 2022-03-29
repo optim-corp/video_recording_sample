@@ -31,15 +31,15 @@ class AudioEncoder(
 
     override val mediaType: MediaType = MediaType.AUDIO
 
-    override val mediaCodec = let {
+    override val mediaCodec = run {
         val format = MediaFormat.createAudioFormat(
-                it.mediaType.mimeType, it.audioData.samplingRate, 1
+                mediaType.mimeType, audioData.samplingRate, 1
             ).apply {
                 setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
                 setInteger(MediaFormat.KEY_CHANNEL_MASK, AudioFormat.CHANNEL_IN_MONO)
-                setInteger(MediaFormat.KEY_BIT_RATE, it.audioData.bitRate)
+                setInteger(MediaFormat.KEY_BIT_RATE, audioData.bitRate)
             }
-        val codec = MediaCodec.createEncoderByType(it.mediaType.mimeType).apply {
+        val codec = MediaCodec.createEncoderByType(mediaType.mimeType).apply {
             configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         }
         codec

@@ -24,16 +24,16 @@ class VideoEncoder(
 
     override val mediaType: MediaType = MediaType.VIDEO
 
-    override val mediaCodec = let {
+    override val mediaCodec = run {
         val format = MediaFormat.createVideoFormat(
-            it.mediaType.mimeType, it.videoData.frameSize.width, it.videoData.frameSize.height
+            mediaType.mimeType, videoData.frameSize.width, videoData.frameSize.height
         ).apply {
             setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-            setInteger(MediaFormat.KEY_BIT_RATE, it.videoData.bitRate)
-            setInteger(MediaFormat.KEY_FRAME_RATE, it.videoData.frameRate)
-            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, it.videoData.frameInterval)
+            setInteger(MediaFormat.KEY_BIT_RATE, videoData.bitRate)
+            setInteger(MediaFormat.KEY_FRAME_RATE, videoData.frameRate)
+            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, videoData.frameInterval)
         }
-        val codec = MediaCodec.createEncoderByType(it.mediaType.mimeType).apply {
+        val codec = MediaCodec.createEncoderByType(mediaType.mimeType).apply {
             configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         }
         codec
