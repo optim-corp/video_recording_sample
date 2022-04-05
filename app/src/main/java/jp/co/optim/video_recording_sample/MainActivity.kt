@@ -130,7 +130,10 @@ class MainActivity : AppCompatActivity() {
             recordManager.prepare(recordData, recordCallback)
             recordManager.start()
         }
-        audioReader.startReading(recordData.audioData) {
+        audioReader.startReading(
+            recordData.audioData.samplingRate,
+            recordData.audioData.bytesPerSample
+        ) {
             recordManager.inputAudioBytes(it)
         }
     }
@@ -145,10 +148,13 @@ class MainActivity : AppCompatActivity() {
             recordManager.prepare(recordData, recordCallback)
             recordManager.start()
         }
-        audioReader.startReading(recordData.audioData) {
+        audioReader.startReading(
+            recordData.audioData.samplingRate,
+            recordData.audioData.bytesPerSample
+        ) {
             recordManager.inputAudioBytes(it)
         }
-        captureRenderer.startRendering(recordData.videoData) {
+        captureRenderer.startRendering(recordData.videoData.frameRate) {
             recordManager.inputVideoBitmap(it)
         }
     }

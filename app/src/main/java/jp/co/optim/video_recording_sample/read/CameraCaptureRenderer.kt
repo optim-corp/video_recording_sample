@@ -15,7 +15,6 @@ import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
 import jp.co.optim.video_recording_sample.extensions.logD
 import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.record.entity.VideoData
 import kotlin.concurrent.thread
 
 class CameraCaptureRenderer(private val context: Context) {
@@ -34,9 +33,9 @@ class CameraCaptureRenderer(private val context: Context) {
 
     private var isRendering = false
 
-    fun openCamera(view: TextureView, size: Size) {
-        textureView = view
-        frameSize = size
+    fun openCamera(textureView: TextureView, frameSize: Size) {
+        this.textureView = textureView
+        this.frameSize = frameSize
 
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
@@ -50,10 +49,12 @@ class CameraCaptureRenderer(private val context: Context) {
 
     fun closeCamera() {
         isOpened = false
+        isRendering = false
 
         cameraCaptureSession?.close()
         cameraDevice?.close()
 
+        frameSize = Size(0, 0)
         textureView = null
         cameraCaptureSession = null
         cameraDevice = null
@@ -61,11 +62,11 @@ class CameraCaptureRenderer(private val context: Context) {
     }
 
     fun startRendering(
-        videoData: VideoData,
+        frameRate: Int,
         listener: (bitmap: Bitmap) -> Unit?
     ) {
         isRendering = true
-        thread { render(videoData.frameSize, videoData.frameRate, listener) }
+        thread { render(frameRate, listener) }
     }
 
     fun stopRendering() {
@@ -73,14 +74,13 @@ class CameraCaptureRenderer(private val context: Context) {
     }
 
     private fun decideCameraId(cameraManager: CameraManager): String {
-        val cameraIds = cameraManager.cameraIdList
         var frontCameraId: String? = null
         var backCameraId: String? = null
-        for (cameraId in cameraIds) {
-            when (cameraManager.getCameraCharacteristics(cameraId)
+        cameraManager.cameraIdList.forEach {
+            when (cameraManager.getCameraCharacteristics(it)
                 .get(CameraCharacteristics.LENS_FACING)) {
-                CameraCharacteristics.LENS_FACING_FRONT -> frontCameraId = frontCameraId ?: cameraId
-                CameraCharacteristics.LENS_FACING_BACK -> backCameraId = backCameraId ?: cameraId
+                CameraCharacteristics.LENS_FACING_FRONT -> frontCameraId = frontCameraId ?: it
+                CameraCharacteristics.LENS_FACING_BACK -> backCameraId = backCameraId ?: it
             }
         }
         return backCameraId ?: frontCameraId
@@ -117,7 +117,6 @@ class CameraCaptureRenderer(private val context: Context) {
 
     @WorkerThread
     private fun render(
-        size: Size,
         frameRate: Int,
         listener: (bitmap: Bitmap) -> Unit?
     ) {
@@ -125,18 +124,19 @@ class CameraCaptureRenderer(private val context: Context) {
         logI("Start rendering. timeInterval: $intervalMillis")
         var currentBitmap: Bitmap? = null
         while (isRendering) {
-            val newBitmap = if (isOpened) textureView?.getBitmap(size.width, size.height) else null
+            val newBitmap =
+                if (isOpened) textureView?.getBitmap(frameSize.width, frameSize.height) else null
             if (newBitmap != null) {
-                logI("New Bitmap")
+                logD("New Bitmap")
                 listener(newBitmap)
-                if (currentBitmap != null && !currentBitmap.isRecycled) {
-                    currentBitmap.recycle()
+                currentBitmap?.let {
+                    if (!it.isRecycled) it.recycle()
                 }
                 currentBitmap = newBitmap
             } else {
-                logI("Current Bitmap")
-                if (currentBitmap != null && !currentBitmap.isRecycled) {
-                    listener(currentBitmap)
+                logD("Current Bitmap")
+                currentBitmap?.let {
+                    if (!it.isRecycled) listener(it)
                 }
             }
             try {
@@ -145,8 +145,8 @@ class CameraCaptureRenderer(private val context: Context) {
                 // Ignored.
             }
         }
-        if (currentBitmap != null && !currentBitmap.isRecycled) {
-            currentBitmap.recycle()
+        currentBitmap?.let {
+            if (!it.isRecycled) it.recycle()
         }
         logI("End rendering.")
     }

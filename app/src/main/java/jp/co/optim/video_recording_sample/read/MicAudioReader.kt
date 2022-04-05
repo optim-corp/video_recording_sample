@@ -8,7 +8,6 @@ import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.extensions.logD
 import jp.co.optim.video_recording_sample.extensions.logE
 import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.record.entity.AudioData
 import kotlin.concurrent.thread
 import kotlin.math.max
 
@@ -25,24 +24,25 @@ class MicAudioReader {
     private var isReading = false
 
     fun startReading(
-        audioData: AudioData,
+        samplingRate: Int,
+        bytesPerSample: Int,
         listener: (bytes: ByteArray) -> Unit?
     ) {
         isReading = true
 
         val bufferSize = max(
-            audioData.samplingRate / 10,
+            samplingRate / 10,
             AudioRecord.getMinBufferSize(
-                audioData.samplingRate,
+                samplingRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-        ) * audioData.bytesPerSample
+        ) * bytesPerSample
 
         @SuppressLint("MissingPermission")
         val audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
-            audioData.samplingRate,
+            samplingRate,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
             bufferSize
