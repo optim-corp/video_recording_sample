@@ -6,6 +6,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.WorkerThread
 import jp.co.optim.video_recording_sample.extensions.logD
+import jp.co.optim.video_recording_sample.extensions.logE
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import kotlin.concurrent.thread
@@ -46,7 +47,6 @@ class MicAudioReader {
             AudioFormat.ENCODING_PCM_16BIT,
             bufferSize
         )
-        audioRecord.startRecording()
 
         // スレッド開始
         thread { read(bufferSize, audioRecord, listener) }
@@ -63,19 +63,29 @@ class MicAudioReader {
         listener: (bytes: ByteArray) -> Unit?
     ) {
         val outBufferSize = estimateBufferSize(inBufferSize)
-        val inBytes = ByteArray(inBufferSize)
-        val outBytes = ByteArray(outBufferSize)
-        logI("Start reading.")
         logD("inBufferSize: $inBufferSize, outBufferSize: $outBufferSize")
-        while (isReading) {
-            audioRecord.read(inBytes, 0, inBufferSize)
-            for (index in 0 until inBufferSize step outBufferSize) {
-                inBytes.copyInto(outBytes, 0, index, index + outBufferSize)
-                listener(outBytes)
+
+        try {
+            logI("Start AudioRecord.")
+            audioRecord.startRecording()
+            val inBytes = ByteArray(inBufferSize)
+            val outBytes = ByteArray(outBufferSize)
+            while (isReading) {
+                audioRecord.read(inBytes, 0, inBufferSize)
+                for (index in 0 until inBufferSize step outBufferSize) {
+                    inBytes.copyInto(outBytes, 0, index, index + outBufferSize)
+                    listener(outBytes)
+                }
             }
+            logI("Stop AudioRecord.")
+            audioRecord.stop()
+        } catch (e: IllegalStateException) {
+            logE("Failed to start or stop AudioRecord.")
+        } finally {
+            logI("Release AudioRecord.")
+            audioRecord.release()
+            isReading = false
         }
-        logI("End reading.")
-        audioRecord.release()
     }
 
     private fun estimateBufferSize(orgBufferSize: Int): Int =
