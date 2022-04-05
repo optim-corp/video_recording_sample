@@ -5,12 +5,21 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.WorkerThread
+import jp.co.optim.video_recording_sample.extensions.logD
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import kotlin.concurrent.thread
 import kotlin.math.max
 
 class MicAudioReader {
+
+    companion object {
+        // バッファーサイズの閾値.
+        // バッファーの読み込みサイズが閾値以上だった場合、分割してからコールバックを呼び出す.
+        // AudioRecord 読み込み時のバッファーサイズが大きすぎると
+        // AudioEncoder 書き込み時に BufferOverflowException が発生するため.
+        private const val BUFFER_SIZE_LIMIT = 1024
+    }
 
     private var isReading = false
 
@@ -49,17 +58,27 @@ class MicAudioReader {
 
     @WorkerThread
     private fun read(
-        bufferSize: Int,
+        inBufferSize: Int,
         audioRecord: AudioRecord,
         listener: (bytes: ByteArray) -> Unit?
     ) {
+        val outBufferSize = estimateBufferSize(inBufferSize)
+        val inBytes = ByteArray(inBufferSize)
+        val outBytes = ByteArray(outBufferSize)
         logI("Start reading.")
+        logD("inBufferSize: $inBufferSize, outBufferSize: $outBufferSize")
         while (isReading) {
-            val bytes = ByteArray(bufferSize)
-            audioRecord.read(bytes, 0, bufferSize)
-            listener(bytes)
+            audioRecord.read(inBytes, 0, inBufferSize)
+            for (index in 0 until inBufferSize step outBufferSize) {
+                inBytes.copyInto(outBytes, 0, index, index + outBufferSize)
+                listener(outBytes)
+            }
         }
         logI("End reading.")
         audioRecord.release()
     }
+
+    private fun estimateBufferSize(orgBufferSize: Int): Int =
+        if (orgBufferSize <= BUFFER_SIZE_LIMIT) orgBufferSize
+        else estimateBufferSize(orgBufferSize / 2)
 }
