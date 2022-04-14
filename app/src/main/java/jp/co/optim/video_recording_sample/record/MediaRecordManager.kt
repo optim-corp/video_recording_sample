@@ -8,7 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.extensions.*
+import jp.co.optim.video_recording_sample.ktx.*
 import jp.co.optim.video_recording_sample.record.encode.AudioEncoder
 import jp.co.optim.video_recording_sample.record.encode.MediaEncoder
 import jp.co.optim.video_recording_sample.record.encode.VideoEncoder

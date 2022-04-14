@@ -3,8 +3,8 @@ package jp.co.optim.video_recording_sample.record.encode
 import android.media.MediaCodec
 import android.media.MediaFormat
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.extensions.logE
-import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.ktx.logE
+import jp.co.optim.video_recording_sample.ktx.logI
 import jp.co.optim.video_recording_sample.record.entity.MediaType
 import java.nio.ByteBuffer
 import java.util.concurrent.locks.ReentrantLock

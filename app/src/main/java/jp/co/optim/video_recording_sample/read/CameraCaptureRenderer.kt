@@ -13,9 +13,9 @@ import android.view.Surface
 import android.view.TextureView
 import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
-import jp.co.optim.video_recording_sample.extensions.logD
-import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.extensions.logW
+import jp.co.optim.video_recording_sample.ktx.logD
+import jp.co.optim.video_recording_sample.ktx.logI
+import jp.co.optim.video_recording_sample.ktx.logW
 import kotlin.concurrent.thread
 
 class CameraCaptureRenderer(private val context: Context) {

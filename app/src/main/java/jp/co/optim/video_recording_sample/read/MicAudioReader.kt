@@ -5,9 +5,9 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.WorkerThread
-import jp.co.optim.video_recording_sample.extensions.logD
-import jp.co.optim.video_recording_sample.extensions.logE
-import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.ktx.logD
+import jp.co.optim.video_recording_sample.ktx.logE
+import jp.co.optim.video_recording_sample.ktx.logI
 import kotlin.concurrent.thread
 import kotlin.math.max
 

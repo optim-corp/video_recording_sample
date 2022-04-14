@@ -1,6 +1,6 @@
 package jp.co.optim.video_recording_sample.record.entity
 
-import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.ktx.logI
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat

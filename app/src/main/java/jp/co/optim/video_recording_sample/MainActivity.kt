@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import com.google.android.material.snackbar.Snackbar
 import jp.co.optim.video_recording_sample.databinding.ActivityMainBinding
-import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.ktx.logI
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
 import jp.co.optim.video_recording_sample.record.MediaRecordManager
