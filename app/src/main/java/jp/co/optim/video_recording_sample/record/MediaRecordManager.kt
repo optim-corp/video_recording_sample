@@ -51,7 +51,9 @@ class MediaRecordManager : MediaEncoder.Callback {
 
     private var isPrepared = false
     private var isStarted = false
-    private var isRecording = false
+
+    var isRecording = false
+    private set
 
     // エンコードが利用可能か.
     private val isEncodeAvailable: Boolean get() =

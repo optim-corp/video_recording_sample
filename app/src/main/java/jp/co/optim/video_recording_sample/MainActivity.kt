@@ -2,13 +2,13 @@ package jp.co.optim.video_recording_sample
 
 import android.Manifest
 import android.os.Bundle
-import android.widget.Toast
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
+import com.google.android.material.snackbar.Snackbar
 import jp.co.optim.video_recording_sample.databinding.ActivityMainBinding
 import jp.co.optim.video_recording_sample.extensions.logI
-import jp.co.optim.video_recording_sample.extensions.logW
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
 import jp.co.optim.video_recording_sample.read.entity.ScreenResolution
@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
 
     private val captureRenderer = CameraCaptureRenderer(this)
 
-    private var resolution: ScreenResolution = ScreenResolution.UNKNOWN
+    private var currentResolution: ScreenResolution = ScreenResolution.MIC_ONLY
 
     private var isCheckedPermissions = false
 
@@ -48,23 +48,26 @@ class MainActivity : AppCompatActivity() {
                     return@registerForActivityResult
                 }
             }
-            logI("All runtime permissions are granted. Show dialog.")
-            showSelectDialog()
+            logI("All runtime permissions are granted.")
+            openCamera(currentResolution)
         }
 
     private val recordCallback = object : MediaRecordManager.Callback {
         override fun onStarted() {
-            setButtonsEnabled(isStartEnabled = false, isStopEnabled = true)
+            binding.mtbRecord.isEnabled = true
+            binding.mtbRecord.icon = AppCompatResources.getDrawable(this@MainActivity, R.drawable.ic_stop_circle)
         }
         override fun onFinished(t: Throwable?) {
-            setButtonsEnabled(isStartEnabled = true, isStopEnabled = false)
-            t?.let {
-                Toast.makeText(
-                    this@MainActivity,
-                    R.string.finished_record_abnormally_toast_message,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            binding.mtbRecord.isEnabled = true
+            binding.mtbRecord.icon = AppCompatResources.getDrawable(this@MainActivity, R.drawable.ic_circle)
+            binding.fabSettings.show()
+
+            Snackbar.make(
+                binding.root,
+                if (t == null) R.string.finished_record_normally_toast_message
+                else R.string.finished_record_abnormally_toast_message,
+                Snackbar.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -73,29 +76,57 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.buttonStartAudio.setOnClickListener {
-            logI("Clicked start audio button.")
-            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
-            startAudio()
+        binding.mtbRecord.setOnClickListener {
+            binding.mtbRecord.isEnabled = false
+            binding.fabSettings.hide()
+
+            if (!recordManager.isRecording) {
+                // Start recording.
+                if (currentResolution == ScreenResolution.MIC_ONLY) {
+                    startAudio()
+                } else {
+                    startVideo()
+                }
+            } else {
+                // Stop recording.
+                stopAll()
+            }
         }
-        binding.buttonStartVideo.setOnClickListener {
-            logI("Clicked start video button.")
-            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
-            startVideo()
+        binding.fabSettings.setOnClickListener {
+            if (binding.radioGroupFabMenu.visibility == View.VISIBLE) {
+                binding.mtbRecord.isEnabled = true
+                binding.radioGroupFabMenu.visibility = View.GONE
+                val resolution = when (binding.radioGroupFabMenu.checkedRadioButtonId) {
+                    R.id.mrb_sd -> ScreenResolution.SD
+                    R.id.mrb_hd -> ScreenResolution.HD
+                    R.id.mrb_full_hd -> ScreenResolution.FULL_HD
+                    else -> ScreenResolution.MIC_ONLY
+                }
+                if (currentResolution == resolution) return@setOnClickListener
+
+                currentResolution = resolution
+                val resId = when (resolution) {
+                    ScreenResolution.SD -> R.string.label_sd
+                    ScreenResolution.HD -> R.string.label_hd
+                    ScreenResolution.FULL_HD -> R.string.label_full_hd
+                    else -> R.string.label_mic_only
+                }
+                binding.textViewResolution.setText(resId)
+                closeCamera()
+                openCamera(resolution)
+            } else {
+                binding.mtbRecord.isEnabled = false
+                binding.radioGroupFabMenu.visibility = View.VISIBLE
+            }
         }
-        binding.buttonStop.setOnClickListener {
-            logI("Clicked stop button.")
-            setButtonsEnabled(isStartEnabled = false, isStopEnabled = false)
-            stopAll()
-        }
-        setButtonsEnabled(isStartEnabled = true, isStopEnabled = false)
+        binding.radioGroupFabMenu.visibility = View.GONE
     }
 
     override fun onResume() {
         super.onResume()
 
         if (isCheckedPermissions) {
-            openCamera()
+            openCamera(currentResolution)
         } else {
             logI("Check runtime permissions.")
             requestMultiplePermissions.launch(runtimePermissions)
@@ -105,19 +136,24 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
 
-        logI("Close camera.")
-        captureRenderer.closeCamera()
+        closeCamera()
     }
 
-    private fun openCamera() {
-        if (resolution == ScreenResolution.UNKNOWN) {
-            logW("Resolution is unknown. Cannot open camera.")
+    private fun openCamera(resolution: ScreenResolution) {
+        if (resolution == ScreenResolution.MIC_ONLY) {
+            logI("No needed to open camera.")
             return
         }
-        logI("Open camera. resolution: $resolution")
+
+        logI("Open camera. ScreenResolution: $resolution")
+        binding.textureView.visibility = View.VISIBLE
         captureRenderer.openCamera(binding.textureView, resolution.frameSize)
-        binding.textViewResolution.text =
-            getString(R.string.resolution_text_message, resolution.toString())
+    }
+
+    private fun closeCamera() {
+        logI("Close camera.")
+        binding.textureView.visibility = View.GONE
+        captureRenderer.closeCamera()
     }
 
     private fun startAudio() {
@@ -141,7 +177,7 @@ class MainActivity : AppCompatActivity() {
     private fun startVideo() {
         val dir = getExternalFilesDir(null)
             ?: throw IllegalArgumentException("Cannot get parent dir.")
-        val recordData = RecordData.newVideoRecordData(dir, AudioData(), VideoData(resolution.frameSize))
+        val recordData = RecordData.newVideoRecordData(dir, AudioData(), VideoData(currentResolution.frameSize))
 
         logI("Start video recording.")
         thread {
@@ -164,33 +200,5 @@ class MainActivity : AppCompatActivity() {
         recordManager.stop()
         audioReader.stopReading()
         captureRenderer.stopRendering()
-    }
-
-    private fun showSelectDialog() {
-        val nameArray = ScreenResolution.values()
-            .filter { it != ScreenResolution.UNKNOWN }
-            .map { it.toString() }
-            .toTypedArray()
-
-        AlertDialog.Builder(this).apply {
-            setTitle(R.string.select_dialog_title)
-            setSingleChoiceItems(nameArray, 0) { _, item ->
-                resolution = ScreenResolution.convertFromString(nameArray[item])
-            }
-            setPositiveButton(R.string.select) { _, _ ->
-                if (resolution == ScreenResolution.UNKNOWN) resolution = ScreenResolution.SD
-                openCamera()
-            }
-            setNegativeButton(R.string.cancel) { _, _ ->
-                finish()
-            }
-            setCancelable(false)
-        }.show()
-    }
-
-    private fun setButtonsEnabled(isStartEnabled: Boolean, isStopEnabled: Boolean) {
-        binding.buttonStartAudio.isEnabled = isStartEnabled
-        binding.buttonStartVideo.isEnabled = isStartEnabled
-        binding.buttonStop.isEnabled = isStopEnabled
     }
 }

@@ -1,14 +1,12 @@
 <resources>
     <string name="app_name">Video Recording Sample</string>
 
-    <string name="audio">Audio</string>
-    <string name="video">Video</string>
-    <string name="stop">Stop</string>
-    <string name="select">Select</string>
-    <string name="cancel">Cancel</string>
+    <string name="settings">Settings</string>
+    <string name="label_mic_only">Mic Only</string>
+    <string name="label_sd">SD (480 x 720)</string>
+    <string name="label_hd">HD (720 x 1280)</string>
+    <string name="label_full_hd">Full HD (1080 x 1920)</string>
 
-    <string name="select_dialog_title">Select Screen Resolution</string>
-    <string name="resolution_text_message">Screen Resolution: %s</string>
-
+    <string name="finished_record_normally_toast_message">Record is finished normally.</string>
     <string name="finished_record_abnormally_toast_message">Record is finished abnormally.</string>
 </resources>

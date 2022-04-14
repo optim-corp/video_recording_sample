@@ -15,6 +15,7 @@ import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
 import jp.co.optim.video_recording_sample.extensions.logD
 import jp.co.optim.video_recording_sample.extensions.logI
+import jp.co.optim.video_recording_sample.extensions.logW
 import kotlin.concurrent.thread
 
 class CameraCaptureRenderer(private val context: Context) {
@@ -34,6 +35,11 @@ class CameraCaptureRenderer(private val context: Context) {
     private var isRendering = false
 
     fun openCamera(textureView: TextureView, frameSize: Size) {
+        if (isOpened) {
+            logW("Camera is already opened.")
+            return
+        }
+
         this.textureView = textureView
         this.frameSize = frameSize
 

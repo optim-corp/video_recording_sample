@@ -7,6 +7,11 @@ import android.util.Size
  */
 enum class ScreenResolution(val frameSize: Size) {
     /**
+     * Mic Only
+     */
+    MIC_ONLY(Size(0, 0)),
+
+    /**
      * SD
      */
     SD(Size(480, 720)),
@@ -20,15 +25,10 @@ enum class ScreenResolution(val frameSize: Size) {
      * Full HD
      */
     FULL_HD(Size(1080, 1920)),
-
-    /**
-     * 不明
-     */
-    UNKNOWN(Size(0, 0)),
     ;
 
     companion object {
         fun convertFromString(name: String): ScreenResolution =
-            values().find { it.toString() == name } ?: UNKNOWN
+            values().find { it.toString() == name } ?: MIC_ONLY
     }
 }
