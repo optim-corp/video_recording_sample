@@ -1,4 +1,4 @@
-package jp.co.optim.video_recording_sample.read.entity
+package jp.co.optim.video_recording_sample
 
 import android.util.Size
 
@@ -25,10 +25,4 @@ enum class ScreenResolution(val frameSize: Size) {
      * Full HD
      */
     FULL_HD(Size(1080, 1920)),
-    ;
-
-    companion object {
-        fun convertFromString(name: String): ScreenResolution =
-            values().find { it.toString() == name } ?: MIC_ONLY
-    }
 }

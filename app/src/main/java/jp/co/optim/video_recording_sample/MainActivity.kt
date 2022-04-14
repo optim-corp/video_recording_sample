@@ -11,13 +11,11 @@ import jp.co.optim.video_recording_sample.databinding.ActivityMainBinding
 import jp.co.optim.video_recording_sample.extensions.logI
 import jp.co.optim.video_recording_sample.read.CameraCaptureRenderer
 import jp.co.optim.video_recording_sample.read.MicAudioReader
-import jp.co.optim.video_recording_sample.read.entity.ScreenResolution
 import jp.co.optim.video_recording_sample.record.MediaRecordManager
 import jp.co.optim.video_recording_sample.record.entity.AudioData
 import jp.co.optim.video_recording_sample.record.entity.RecordData
 import jp.co.optim.video_recording_sample.record.entity.VideoData
 import kotlin.concurrent.thread
-
 
 class MainActivity : AppCompatActivity() {
 
