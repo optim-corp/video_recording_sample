@@ -94,22 +94,12 @@ class MainActivity : AppCompatActivity() {
             if (binding.radioGroupFabMenu.visibility == View.VISIBLE) {
                 binding.mtbRecord.isEnabled = true
                 binding.radioGroupFabMenu.visibility = View.GONE
-                val resolution = when (binding.radioGroupFabMenu.checkedRadioButtonId) {
-                    R.id.mrb_sd -> ScreenResolution.SD
-                    R.id.mrb_hd -> ScreenResolution.HD
-                    R.id.mrb_full_hd -> ScreenResolution.FULL_HD
-                    else -> ScreenResolution.MIC_ONLY
-                }
+                val resolution = ScreenResolution.convertFromResId(
+                    binding.radioGroupFabMenu.checkedRadioButtonId)
                 if (currentResolution == resolution) return@setOnClickListener
 
                 currentResolution = resolution
-                val resId = when (resolution) {
-                    ScreenResolution.SD -> R.string.label_sd
-                    ScreenResolution.HD -> R.string.label_hd
-                    ScreenResolution.FULL_HD -> R.string.label_full_hd
-                    else -> R.string.label_mic_only
-                }
-                binding.textViewResolution.setText(resId)
+                binding.textViewResolution.setText(resolution.stringResId)
                 closeCamera()
                 openCamera(resolution)
             } else {
